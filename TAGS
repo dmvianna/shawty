@@ -2,7 +2,7 @@
 ./Setup.hs,15
 main main1,2
 
-./app/Main.hs,608
+./app/Main.hs,612
 module Main Main2,3
 alphaNum alphaNum14,15
 alphaNum alphaNum15,16
@@ -24,8 +24,8 @@ shortyFound shortyFound58,59
 shortyFound shortyFound59,60
 app app62,63
 app app64,65
-main main89,90
-main main90,91
+main main103,104
+main main104,105
 
 ./test/Spec.hs,30
 main main0,1
