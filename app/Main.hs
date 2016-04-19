@@ -60,6 +60,27 @@ shortyFound :: TL.Text -> TL.Text -> TL.Text
 shortyFound short tbs =
   TL.concat ["<a href=\"", short, "\">", tbs, "</a>"]
 
+safeReturn :: R.Connection
+           -> BC.ByteString
+           -> BC.ByteString
+           -> ActionM ()
+safeReturn rConn uri shorty = do
+    -- Check if shorty exists
+    found <- liftIO (getURI rConn shorty)
+    case found of
+      -- Database error
+      Left reply -> text (TL.pack (show reply))
+      -- Shorty is new: save and display
+      Right Nothing -> do
+                 resp <- liftIO (saveURI rConn shorty uri)
+                 html (shortyCreated resp (BC.unpack shorty))
+      -- Shorty exists: display existing key
+      Right (Just orig) -> html (shortyCreated uri
+                                 (BC.unpack orig))
+      -- This should be a separate function,
+      -- which we can then test by providing
+      -- tailored shorty strings.
+
 app :: R.Connection
     -> ScottyM ()
 app rConn = do
@@ -72,21 +93,7 @@ app rConn = do
               shawty <- liftIO shortyGen
               let shorty = BC.pack shawty
                   uri' = encodeUtf8 (TL.toStrict uri)
-              -- Check if shorty exists
-              found <- liftIO (getURI rConn shorty)
-              case found of
-                -- Database error
-                Left reply -> text (TL.pack (show reply))
-                -- Shorty is new: save and display
-                Right Nothing -> do
-                    resp <- liftIO (saveURI rConn shorty uri')
-                    html (shortyCreated resp shawty)
-                    -- Shorty exists: display existing key
-                Right (Just orig) -> html (shortyCreated uri'
-                                           (BC.unpack orig))
-              -- This should be a separate function,
-              -- which we can then test by providing
-              -- tailored shorty strings.
+              safeReturn rConn shorty uri'
       Nothing -> text (shortyAintUri uri)
 
   get "/:short" $ do
