@@ -73,7 +73,11 @@ safeReturn rConn uri shorty = do
       -- Shorty is new: save and display
       Right Nothing -> do
                  resp <- liftIO (saveURI rConn shorty uri)
-                 html (shortyCreated resp (BC.unpack shorty))
+                 case resp of
+                   Right _ ->
+                       html (shortyCreated uri (BC.unpack shorty))
+                   Left err ->
+                       text (TL.pack (show err))
       -- Shorty exists: display existing key
       Right (Just orig) -> html (shortyCreated uri
                                  (BC.unpack orig))
@@ -93,7 +97,7 @@ app rConn = do
               shawty <- liftIO shortyGen
               let shorty = BC.pack shawty
                   uri' = encodeUtf8 (TL.toStrict uri)
-              safeReturn rConn shorty uri'
+              safeReturn rConn uri' shorty
       Nothing -> text (shortyAintUri uri)
 
   get "/:short" $ do
@@ -102,6 +106,7 @@ app rConn = do
     case uri of
       Left reply -> text (TL.pack (show reply))
       Right mbBS -> case mbBS of
+
         Nothing -> text "uri not found"
         Just bs -> html (shortyFound short' tbs)
           where tbs :: TL.Text
