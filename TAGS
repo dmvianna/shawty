@@ -2,32 +2,39 @@
 ./Setup.hs,15
 main main1,2
 
-./app/Main.hs,670
+./app/Main.hs,932
 module Main Main2,3
 alphaNum alphaNum14,15
 alphaNum alphaNum15,16
 randomElement randomElement17,18
 randomElement randomElement18,19
-shortyGen shortyGen24,25
-shortyGen shortyGen25,26
-saveURI saveURI27,28
-saveURI saveURI31,32
-getURI getURI34,35
-getURI getURI37,38
-linkShorty linkShorty39,40
-linkShorty linkShorty40,41
-shortyCreated shortyCreated46,47
-shortyCreated shortyCreated47,48
-shortyAintUri shortyAintUri52,53
-shortyAintUri shortyAintUri53,54
-shortyFound shortyFound58,59
-shortyFound shortyFound59,60
-safeReturn safeReturn62,63
-safeReturn safeReturn66,67
-app app87,88
-app app89,90
-main main115,116
-main main116,117
+data URItoSave URItoSave25,26
+data URItoSave = URItoSave URItoSave25,26
+      saveShortURI saveShortURI26,27
+    , saveOrigURI saveOrigURI27,28
+    , saveRConn saveRConn28,29
+data URItoGet URItoGet31,32
+data URItoGet = URItoGet URItoGet31,32
+      getShortURI getShortURI32,33
+    , getRConn getRConn33,34
+shortyGen shortyGen36,37
+shortyGen shortyGen37,38
+saveURI saveURI40,41
+saveURI saveURI42,43
+getURI getURI44,45
+getURI getURI46,47
+linkShorty linkShorty48,49
+linkShorty linkShorty49,50
+shortyCreated shortyCreated55,56
+shortyCreated shortyCreated56,57
+shortyAintUri shortyAintUri61,62
+shortyAintUri shortyAintUri62,63
+shortyFound shortyFound67,68
+shortyFound shortyFound68,69
+app app71,72
+app app72,73
+main main96,97
+main main97,98
 
 ./test/Spec.hs,30
 main main0,1

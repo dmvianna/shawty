@@ -19,23 +19,32 @@ randomElement :: String -> IO Char
 randomElement xs = do
   let maxIndex :: Int
       maxIndex = length xs - 1
+  -- Right of arrow is IO Int, so randomDigit is Int
   randomDigit <- SR.randomRIO (0, maxIndex) :: IO Int
   return (xs !! randomDigit)
 
-shortyGen :: IO [Char]
-shortyGen = replicateM 7 (randomElement alphaNum)
+data URItoSave = URItoSave {
+      saveShortURI :: BC.ByteString
+    , saveOrigURI :: BC.ByteString
+    , saveRConn :: R.Connection
+    }
 
-saveURI :: R.Connection
-        -> BC.ByteString
-        -> BC.ByteString
+data URItoGet = URItoGet {
+      getShortURI :: BC.ByteString
+    , getRConn :: R.Connection
+    }
+
+shortyGen :: IO String
+shortyGen =
+  replicateM 7 (randomElement alphaNum)
+
+saveURI :: URItoSave
         -> IO (Either R.Reply R.Status)
-saveURI conn shortURI uri =
-  R.runRedis conn $ R.set shortURI uri
+saveURI = R.runRedis <$> saveRConn <*> (R.set <$> saveShortURI <*> saveOrigURI)
 
-getURI :: R.Connection
-       -> BC.ByteString
-       -> IO (Either R.Reply (Maybe BC.ByteString))
-getURI conn shortURI = R.runRedis conn $ R.get shortURI
+getURI  :: URItoGet
+        -> IO (Either R.Reply (Maybe BC.ByteString))
+getURI = R.runRedis <$> getRConn <*> (R.get <$> getShortURI)
 
 linkShorty :: String -> String
 linkShorty shorty =
@@ -56,64 +65,37 @@ shortyAintUri uri =
             , " wasn't a url, did you forget http://?"
             ]
 
-shortyFound :: TL.Text -> TL.Text -> TL.Text
-shortyFound short tbs =
-  TL.concat ["<a href=\"", short, "\">", tbs, "</a>"]
+shortyFound :: TL.Text -> TL.Text
+shortyFound tbs =
+  TL.concat ["<a href=\"", tbs, "\">", tbs, "</a>"]
 
-safeReturn :: R.Connection
-           -> BC.ByteString
-           -> BC.ByteString
-           -> ActionM ()
-safeReturn rConn uri shorty = do
-    -- Check if shorty exists
-    found <- liftIO (getURI rConn shorty)
-    case found of
-      -- Database error
-      Left reply -> text (TL.pack (show reply))
-      -- Shorty is new: save and display
-      Right Nothing -> do
-                 resp <- liftIO (saveURI rConn shorty uri)
-                 case resp of
-                   Right _ ->
-                       html (shortyCreated uri (BC.unpack shorty))
-                   Left err ->
-                       text (TL.pack (show err))
-      -- Shorty exists: display existing key
-      Right (Just orig) -> html (shortyCreated uri
-                                 (BC.unpack orig))
-      -- This should be a separate function,
-      -- which we can then test by providing
-      -- tailored shorty strings.
-
-app :: R.Connection
-    -> ScottyM ()
+app :: R.Connection -> ScottyM ()
 app rConn = do
   get "/" $ do
     uri <- param "uri"
     let parsedUri :: Maybe URI
         parsedUri = parseURI (TL.unpack uri)
     case parsedUri of
-      Just _ -> do
-              shawty <- liftIO shortyGen
-              let shorty = BC.pack shawty
-                  uri' = encodeUtf8 (TL.toStrict uri)
-              safeReturn rConn uri' shorty
+      Just _  -> do
+        shawty <- liftIO shortyGen
+        let shorty = BC.pack shawty
+            uri' = encodeUtf8 (TL.toStrict uri)
+        resp <- liftIO (saveURI $ URItoSave shorty uri' rConn)
+        html (shortyCreated resp shawty)
       Nothing -> text (shortyAintUri uri)
-
   get "/:short" $ do
     short <- param "short"
-    uri <- liftIO (getURI rConn short)
+    uri <- liftIO (getURI $ URItoGet short rConn)
     case uri of
       Left reply -> text (TL.pack (show reply))
       Right mbBS -> case mbBS of
-
         Nothing -> text "uri not found"
-        Just bs -> html (shortyFound short' tbs)
+        Just bs -> html (shortyFound tbs)
           where tbs :: TL.Text
                 tbs = TL.fromStrict (decodeUtf8 bs)
-                short' = TL.fromStrict (decodeUtf8 short)
 
 main :: IO ()
 main = do
   rConn <- R.connect R.defaultConnectInfo
   scotty 3000 (app rConn)
+
